@@ -14,6 +14,7 @@ The following charts were the excuse to try out the packages *highcharter* (for 
 ```{r}
 #| label: Setup
 #| code-summary: 'Setup code'
+#| output: false
 
 # Libraries
 packages <- c('tidyverse','MetBrewer','highcharter', 'gt', 'gtExtras')
@@ -29,6 +30,7 @@ rm(packages)
 # Importing data
 drivers <- read_csv("archive/drivers.csv", show_col_types = F)
 results <- read_csv('archive/results.csv', show_col_types = F)
+flags <- read_csv("flags_iso.csv")
 
 # Data cleaning
 ## setting mixed nationalities to first one
@@ -41,6 +43,7 @@ drivers$number <- ifelse(drivers$number == '\\N', NA, drivers$number)
 ```{r}
 #| label: Data prep
 #| code-summary: 'Data prep'
+#| output: false
 # Defining wins and podiums vectors
 wins <- 
 results |> 
@@ -105,6 +108,8 @@ by_nat <- drivers |>
 ```
 
 ## Driver nationality
+
+F1 drivers come from all over the world: all continents are or have been represented in the driver's championship. However, not every one of them is *equally* represented. The interactive graph below displays the distribution of the drivers' home countries.
 
 ```{r}
 #| label: Data nationality
@@ -172,41 +177,61 @@ drilldown_chart |>
 
 ## Driver stats
 
+The rankings of the most podiums and the most wins do not necessarily coincide. Below are two tables with these two rankings.
+
 ```{r}
 #| label: Table
-#| code-summary: 'Advanced table design'
+#| code-summary: 'Table design'
 
 # Building df
 wintable <-  drivers |>
-  select(name, nationality, wins, podiums) |> 
-  filter(!is.na(wins) & !is.na(podiums)) |>
+  select(name, nationality, wins) |> 
+  filter(!is.na(wins)) |>
   arrange(desc(wins)) |>
+  slice(1:10)
+podtable <-  drivers |>
+  select(name, nationality, podiums) |> 
+  filter(!is.na(podiums)) |>
+  arrange(desc(podiums)) |>
   slice(1:10)
 
 wintable$nationality <- c('GB', 'DE', 'NL', 'DE', 'FR', 'BR', 'ES', 'GB', 'GB', 'AT')
-
+podtable$nationality <- c('GB', 'DE', 'DE', 'NL', 'ES', 'FR', 'FI', 'BR', 'BR', 'FI')
 # Country flag images
-flags <- read_csv("flags_iso.csv")
 flags <- flags |> 
   select(URL, `Alpha-2 code`)
 ## merge
 wintable <- left_join(wintable, flags, by = join_by('nationality' == `Alpha-2 code`)) |> 
-  select(name, URL, wins, podiums) |> 
+  select(name, URL, wins) |> 
   rename(Name = name,
          Nationality = URL,
-         Wins = wins,
+         Wins = wins)
+podtable <- left_join(podtable, flags, by = join_by('nationality' == `Alpha-2 code`)) |> 
+  select(name, URL, podiums) |> 
+  rename(Name = name,
+         Nationality = URL,
          Podiums = podiums)
 
 wintable |> 
   gt(rowname_col = 'Name') |> 
   tab_header(
     title = md("## F1 drivers with most wins"),
-    subtitle = 'Top ten shown',
-    local_image('F1logo.png')
+    subtitle = 'Top ten shown'
   ) |> 
   gt_img_rows(columns = Nationality, height = 15) |> 
   cols_align(
     align = "center",
-    columns = 2:4)
+    columns = 2:3)
+
+podtable |> 
+  gt(rowname_col = 'Name') |> 
+  tab_header(
+    title = md("## F1 drivers with most podiums"),
+    subtitle = 'Top ten shown'
+  ) |> 
+  gt_img_rows(columns = Nationality, height = 15) |> 
+  cols_align(
+    align = "center",
+    columns = 2:3)
   
 ```
